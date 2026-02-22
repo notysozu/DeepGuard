@@ -19,6 +19,13 @@ Production-style microservice-orchestrated deepfake detection system.
 - Dataset slug: `shivamardeshna/real-and-fake-images-dataset-for-image-forensics`
 - Dataset link: https://www.kaggle.com/datasets/shivamardeshna/real-and-fake-images-dataset-for-image-forensics
 - Detailed reference: `docs/training_data.md`
+- One-command download script: `scripts/download_kaggle_dataset.sh`
+
+### Download Kaggle Dataset
+
+```bash
+./scripts/download_kaggle_dataset.sh
+```
 
 ## Project Structure
 

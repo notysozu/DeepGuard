@@ -8,3 +8,4 @@ database/*.sqlite3
 database/data/
 node_modules/
 web_ui/dist/
+data/raw/
