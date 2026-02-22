@@ -39,3 +39,10 @@ Orchestration Layer + Distributed Model Services + Ensemble Fusion Engine.
 - Deterministic binary classification
 - Forensic-grade logging and audit trails
 - Multimodal extensibility
+
+## Training Data Highlight
+
+- Image training/evaluation source is Kaggle dataset:
+  `shivamardeshna/real-and-fake-images-dataset-for-image-forensics`
+- Reference URL:
+  https://www.kaggle.com/datasets/shivamardeshna/real-and-fake-images-dataset-for-image-forensics

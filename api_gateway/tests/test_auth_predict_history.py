@@ -37,7 +37,11 @@ def test_auth_and_predict_and_history_flow() -> None:
 
     history = client.get("/history", headers=headers)
     assert history.status_code == 200
-    items = history.json()["items"]
+    history_body = history.json()
+    assert "total" in history_body
+    assert "offset" in history_body
+    assert "limit" in history_body
+    items = history_body["items"]
     assert isinstance(items, list)
     assert len(items) >= 1
 

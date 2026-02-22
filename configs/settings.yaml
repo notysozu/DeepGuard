@@ -6,3 +6,8 @@ limits:
   max_payload_mb: 50
 security:
   jwt_algorithm: HS256
+training_data:
+  image:
+    source: kaggle
+    dataset_slug: shivamardeshna/real-and-fake-images-dataset-for-image-forensics
+    dataset_url: https://www.kaggle.com/datasets/shivamardeshna/real-and-fake-images-dataset-for-image-forensics

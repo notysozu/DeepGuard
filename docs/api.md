@@ -68,6 +68,13 @@ Alias to `/predict` for web UI integration.
 
 ### GET `/history`
 Returns detection list (audit metadata). Requires `admin` role.
+Query params:
+- `limit` (1-500, default `100`)
+- `offset` (>=0, default `0`)
+- `media_type` (`image|video|audio`)
+- `verdict` (`fake|real`)
+- `created_after` (ISO datetime)
+- `created_before` (ISO datetime)
 
 ### GET `/history/{request_id}`
 Returns full stored detection JSON. Requires `admin` role.

@@ -76,4 +76,7 @@ class HistoryItem(BaseModel):
 
 
 class HistoryResponse(BaseModel):
+    total: int
+    offset: int
+    limit: int
     items: list[HistoryItem]

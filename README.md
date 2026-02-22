@@ -13,6 +13,13 @@ Production-style microservice-orchestrated deepfake detection system.
 - React web UI with red/green signal
 - Role-based access control (`admin`, `viewer`)
 
+## Training Data (Highlighted)
+
+- Image training source: Kaggle
+- Dataset slug: `shivamardeshna/real-and-fake-images-dataset-for-image-forensics`
+- Dataset link: https://www.kaggle.com/datasets/shivamardeshna/real-and-fake-images-dataset-for-image-forensics
+- Detailed reference: `docs/training_data.md`
+
 ## Project Structure
 
 ```

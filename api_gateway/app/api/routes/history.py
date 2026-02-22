@@ -1,6 +1,7 @@
 import json
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database.crud import get_by_request_id, get_history
@@ -13,11 +14,24 @@ router = APIRouter(tags=["history"])
 
 @router.get("/history", response_model=HistoryResponse)
 def history(
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    media_type: str | None = Query(default=None, pattern="^(image|video|audio)$"),
+    verdict: str | None = Query(default=None, pattern="^(fake|real)$"),
+    created_after: datetime | None = Query(default=None),
+    created_before: datetime | None = Query(default=None),
     _: object = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
-    rows = get_history(db, limit=limit)
+    rows, total = get_history(
+        db,
+        limit=limit,
+        offset=offset,
+        media_type=media_type,
+        verdict=verdict,
+        created_after=created_after,
+        created_before=created_before,
+    )
     items = [
         HistoryItem(
             id=r.id,
@@ -31,7 +45,7 @@ def history(
         )
         for r in rows
     ]
-    return HistoryResponse(items=items)
+    return HistoryResponse(total=total, offset=offset, limit=limit, items=items)
 
 
 @router.get("/history/{request_id}")

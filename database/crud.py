@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from typing import Any
 
 from passlib.context import CryptContext
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from database.models import DetectionRequest, User
@@ -75,9 +76,35 @@ def save_detection(db: Session, payload: dict[str, Any]) -> DetectionRequest:
     return row
 
 
-def get_history(db: Session, limit: int = 100) -> list[DetectionRequest]:
-    stmt = select(DetectionRequest).order_by(desc(DetectionRequest.created_at)).limit(limit)
-    return list(db.scalars(stmt).all())
+def get_history(
+    db: Session,
+    *,
+    limit: int = 100,
+    offset: int = 0,
+    media_type: str | None = None,
+    verdict: str | None = None,
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
+) -> tuple[list[DetectionRequest], int]:
+    stmt = select(DetectionRequest)
+    count_stmt = select(func.count(DetectionRequest.id))
+
+    if media_type:
+        stmt = stmt.where(DetectionRequest.media_type == media_type)
+        count_stmt = count_stmt.where(DetectionRequest.media_type == media_type)
+    if verdict:
+        stmt = stmt.where(DetectionRequest.verdict == verdict)
+        count_stmt = count_stmt.where(DetectionRequest.verdict == verdict)
+    if created_after:
+        stmt = stmt.where(DetectionRequest.created_at >= created_after)
+        count_stmt = count_stmt.where(DetectionRequest.created_at >= created_after)
+    if created_before:
+        stmt = stmt.where(DetectionRequest.created_at <= created_before)
+        count_stmt = count_stmt.where(DetectionRequest.created_at <= created_before)
+
+    total = int(db.scalar(count_stmt) or 0)
+    stmt = stmt.order_by(desc(DetectionRequest.created_at)).offset(offset).limit(limit)
+    return list(db.scalars(stmt).all()), total
 
 
 def get_by_request_id(db: Session, request_id: str) -> DetectionRequest | None:
