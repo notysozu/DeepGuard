@@ -17,6 +17,22 @@ Response:
 }
 ```
 
+### POST `/auth/users` (Admin only)
+Creates a new user account.
+
+Request JSON:
+```json
+{
+  "username": "analyst1",
+  "password": "analyst123",
+  "role": "viewer",
+  "is_active": true
+}
+```
+
+### GET `/auth/users` (Admin only)
+Returns user list.
+
 ## Detection
 
 ### POST `/predict`
@@ -48,13 +64,13 @@ Response shape:
 ### POST `/detect`
 Alias to `/predict` for web UI integration.
 
-## History
+## History (Admin only)
 
 ### GET `/history`
-Returns detection list (audit metadata).
+Returns detection list (audit metadata). Requires `admin` role.
 
 ### GET `/history/{request_id}`
-Returns full stored detection JSON.
+Returns full stored detection JSON. Requires `admin` role.
 
 ## Health
 

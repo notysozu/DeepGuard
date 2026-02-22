@@ -1,17 +1,8 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+"""Compatibility shim.
 
-from api_gateway.app.core.config import settings
+Security ownership moved to shared.security (OAuth2/JWT).
+"""
 
-security_scheme = HTTPBearer(auto_error=False)
+from shared.security import get_current_user as require_auth
 
-
-
-def require_auth(
-    creds: HTTPAuthorizationCredentials | None = Depends(security_scheme),
-) -> None:
-    if creds is None or creds.scheme.lower() != "bearer" or creds.credentials != settings.api_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing authentication token",
-        )
+__all__ = ["require_auth"]

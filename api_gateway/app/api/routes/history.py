@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from database.crud import get_by_request_id, get_history
 from database.session import get_db
 from shared.schemas import HistoryItem, HistoryResponse
-from shared.security import get_current_user
+from shared.security import require_role
 
 router = APIRouter(tags=["history"])
 
@@ -14,7 +14,7 @@ router = APIRouter(tags=["history"])
 @router.get("/history", response_model=HistoryResponse)
 def history(
     limit: int = 100,
-    _: dict = Depends(get_current_user),
+    _: object = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
     rows = get_history(db, limit=limit)
@@ -37,7 +37,7 @@ def history(
 @router.get("/history/{request_id}")
 def history_item(
     request_id: str,
-    _: dict = Depends(get_current_user),
+    _: object = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ):
     row = get_by_request_id(db, request_id=request_id)

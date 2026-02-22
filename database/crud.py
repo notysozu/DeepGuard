@@ -26,11 +26,23 @@ def get_user_by_username(db: Session, username: str) -> User | None:
     return db.scalars(stmt).first()
 
 
-def create_user(db: Session, username: str, password: str, is_active: bool = True) -> User:
+def list_users(db: Session, limit: int = 100) -> list[User]:
+    stmt = select(User).order_by(User.created_at.desc()).limit(limit)
+    return list(db.scalars(stmt).all())
+
+
+def create_user(
+    db: Session,
+    username: str,
+    password: str,
+    role: str = "viewer",
+    is_active: bool = True,
+) -> User:
     user = User(
         id=str(uuid.uuid4()),
         username=username,
         hashed_password=get_password_hash(password),
+        role=role,
         is_active=is_active,
     )
     db.add(user)
@@ -39,11 +51,11 @@ def create_user(db: Session, username: str, password: str, is_active: bool = Tru
     return user
 
 
-def ensure_default_user(db: Session, username: str, password: str) -> User:
+def ensure_default_user(db: Session, username: str, password: str, role: str = "viewer") -> User:
     existing = get_user_by_username(db, username)
     if existing:
         return existing
-    return create_user(db, username, password)
+    return create_user(db, username, password, role=role)
 
 
 def save_detection(db: Session, payload: dict[str, Any]) -> DetectionRequest:

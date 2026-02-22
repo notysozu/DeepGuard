@@ -7,10 +7,10 @@ client = TestClient(app)
 
 
 
-def _get_token() -> str:
+def _get_token(username: str, password: str) -> str:
     response = client.post(
         "/auth/token",
-        data={"username": "admin", "password": "admin123"},
+        data={"username": username, "password": password},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200
@@ -19,7 +19,7 @@ def _get_token() -> str:
 
 
 def test_auth_and_predict_and_history_flow() -> None:
-    token = _get_token()
+    token = _get_token("admin", "admin123")
     headers = {"Authorization": f"Bearer {token}"}
 
     file_payload = {"file": ("sample.jpg", b"binary-media-content", "image/jpeg")}
@@ -46,3 +46,12 @@ def test_auth_and_predict_and_history_flow() -> None:
     assert detail.status_code == 200
     detail_body = detail.json()
     assert detail_body["request_id"] == request_id
+
+
+
+def test_viewer_cannot_access_history() -> None:
+    token = _get_token("viewer", "viewer123")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/history", headers=headers)
+    assert response.status_code == 403

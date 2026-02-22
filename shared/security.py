@@ -63,3 +63,15 @@ async def get_current_user(
     if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+
+def require_role(required_role: str):
+    async def role_dependency(user=Depends(get_current_user)):
+        if getattr(user, "role", None) != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{required_role} role required",
+            )
+        return user
+
+    return role_dependency

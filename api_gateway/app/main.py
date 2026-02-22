@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api_gateway.app.api.routes.auth import router as auth_router
+from api_gateway.app.api.routes.detect import router as detect_router
 from api_gateway.app.api.routes.health import router as health_router
 from api_gateway.app.api.routes.history import router as history_router
 from api_gateway.app.api.routes.predict import router as predict_router
@@ -36,6 +37,7 @@ app.add_middleware(RateLimitMiddleware, limit_per_minute=settings.rate_limit_per
 app.include_router(auth_router)
 app.include_router(health_router)
 app.include_router(predict_router)
+app.include_router(detect_router)
 app.include_router(history_router)
 
 
@@ -49,6 +51,13 @@ def on_startup() -> None:
             db,
             username=os.getenv("APP_USERNAME", "admin"),
             password=os.getenv("APP_PASSWORD", "admin123"),
+            role="admin",
+        )
+        ensure_default_user(
+            db,
+            username=os.getenv("APP_VIEWER_USERNAME", "viewer"),
+            password=os.getenv("APP_VIEWER_PASSWORD", "viewer123"),
+            role="viewer",
         )
     finally:
         db.close()

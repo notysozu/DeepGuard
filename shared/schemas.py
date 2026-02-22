@@ -20,6 +20,25 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["admin", "viewer"] = "viewer"
+    is_active: bool = True
+
+
+class UserPublic(BaseModel):
+    id: str
+    username: str
+    role: Literal["admin", "viewer"]
+    is_active: bool
+    created_at: datetime
+
+
+class UsersResponse(BaseModel):
+    items: list[UserPublic]
+
+
 class ModelRequest(BaseModel):
     media_base64: str
 
