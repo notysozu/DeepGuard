@@ -29,5 +29,13 @@ class EnsembleEngine:
         )
         return round(prob, 4), "stacking"
 
+    def artifact_status(self) -> dict:
+        return {
+            "model_loaded": self.artifacts.model is not None,
+            "scaler_loaded": self.artifacts.scaler is not None,
+            "imputer_loaded": self.artifacts.imputer is not None,
+            "feature_columns_count": len(self.artifacts.feature_columns),
+        }
+
 
 ensemble_engine = EnsembleEngine(default_method="stacking")

@@ -75,4 +75,7 @@ Returns full stored detection JSON. Requires `admin` role.
 ## Health
 
 ### GET `/health`
-Returns gateway status.
+Returns gateway liveness.
+
+### GET `/health/details`
+Operational status including DB connectivity, model registry, ensemble artifacts, and fail-open policy.

@@ -9,6 +9,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _parse_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     app_name: str = os.getenv("APP_NAME", "DeepGuard API Gateway")
@@ -24,6 +30,10 @@ class Settings:
     model_registry_path: str = os.getenv("MODEL_REGISTRY_PATH", "configs/models.yaml")
     max_image_pixels: int = int(os.getenv("MAX_IMAGE_PIXELS", "50000000"))
     rate_limit_per_minute: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+    fail_open_on_model_error: bool = _parse_bool(
+        os.getenv("FAIL_OPEN_ON_MODEL_ERROR"),
+        True,
+    )
 
     @property
     def model_registry_file(self) -> Path:

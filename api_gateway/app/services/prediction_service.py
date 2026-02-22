@@ -6,7 +6,7 @@ import logging
 import time
 import uuid
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from api_gateway.app.core.config import settings
@@ -69,10 +69,16 @@ async def run_prediction(file: UploadFile, db: Session) -> dict:
     )
 
     if not model_results:
-        # Fail-open deterministic fallback keeps service available when all model services fail.
-        model_results = [
-            {"probability": 0.5, "prediction": 1, "class": "fake", "inference_time": 0.0}
-        ]
+        if settings.fail_open_on_model_error:
+            # Deterministic fallback keeps service available when all model services fail.
+            model_results = [
+                {"probability": 0.5, "prediction": 1, "class": "fake", "inference_time": 0.0}
+            ]
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="No model services available to process request",
+            )
 
     verdict, confidence, ensemble_method = classify_binary(
         model_outputs=model_results,
