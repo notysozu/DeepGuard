@@ -1,0 +1,42 @@
+services:
+  api_gateway:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.gateway
+    env_file:
+      - ../../.env
+    depends_on:
+      - database
+      - model_a
+      - model_b
+    ports:
+      - "8000:8000"
+
+  model_a:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.model_a
+    env_file:
+      - ../../.env
+    ports:
+      - "8001:8001"
+
+  model_b:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.model_b
+    env_file:
+      - ../../.env
+    ports:
+      - "8002:8002"
+
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: deepguard
+      POSTGRES_USER: deepguard
+      POSTGRES_PASSWORD: deepguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../../database/data:/var/lib/postgresql/data

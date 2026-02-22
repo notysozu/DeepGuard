@@ -1,0 +1,5 @@
+models:
+  - name: model_a
+    url: http://model_a:8001/predict
+  - name: model_b
+    url: http://model_b:8002/predict

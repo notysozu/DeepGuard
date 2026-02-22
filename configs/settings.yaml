@@ -1,0 +1,8 @@
+ensemble:
+  method: stacking
+  threshold: 0.5
+limits:
+  model_timeout_seconds: 30
+  max_payload_mb: 50
+security:
+  jwt_algorithm: HS256
