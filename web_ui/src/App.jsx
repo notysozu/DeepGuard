@@ -1,4 +1,11 @@
 import { useState } from "react";
+import { Shield, LoaderCircle } from "lucide-react";
+import Header from "./components/Header";
+import APIKeyInput from "./components/APIKeyInput";
+import UploadArea from "./components/UploadArea";
+import ResultCard from "./components/ResultCard";
+import BackgroundEffects from "./components/BackgroundEffects";
+import { TriangleAlert } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
@@ -8,11 +15,16 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError("Select a media file first.");
+      setError("Please provide a media file to analyze.");
+      return;
+    }
+    if (!token) {
+      setError("Authorization token is required.");
       return;
     }
 
@@ -36,56 +48,88 @@ export default function App() {
       if (!response.ok) {
         throw new Error(data.detail || "Prediction request failed");
       }
-      setResult(data);
+      
+      // Delay for UX purposes so the loader shows a bit
+      setTimeout(() => setResult(data), 600);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 600);
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+      setResult(null);
+      setError("");
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setResult(null);
+      setError("");
     }
   };
 
   return (
-    <main className="page">
-      <section className="card">
-        <h1>DeepGuard</h1>
-        <p>Binary authenticity detection for media files.</p>
+    <div className="page-container">
+      <BackgroundEffects />
+      
+      <Header />
 
-        <form onSubmit={handleSubmit} className="form">
-          <label>
-            JWT Token
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Paste bearer token"
-            />
-          </label>
+      <section className="glass-panel">
+        <form onSubmit={handleSubmit}>
+          
+          <APIKeyInput token={token} setToken={setToken} />
 
-          <label>
-            Upload Media
-            <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          </label>
+          <UploadArea 
+            file={file}
+            dragActive={dragActive}
+            handleDrag={handleDrag}
+            handleDrop={handleDrop}
+            handleFileChange={handleFileChange}
+          />
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Analyzing..." : "Detect"}
+          <button type="submit" className={`btn-primary ${loading ? 'loading' : ''}`} disabled={loading}>
+            {loading ? (
+              <>
+                <LoaderCircle className="spinner" />
+                <span>Analyzing Media...</span>
+              </>
+            ) : (
+              <>
+                <Shield size={20} />
+                <span>Analyze Authenticity</span>
+              </>
+            )}
           </button>
         </form>
 
-        {error && <div className="error">{error}</div>}
-
-        {result && (
-          <div className={`result ${result.verdict === "fake" ? "fake" : "real"}`}>
-            <h2>
-              {result.verdict === "fake"
-                ? "Confirmed Synthetic Media"
-                : "Authentic Media"}
-            </h2>
-            <p>Confidence: {(result.confidence * 100).toFixed(2)}%</p>
-            <p>Model count: {result.model_count}</p>
-            <p>Inference time: {result.inference_time}s</p>
+        {error && (
+          <div className="alert-message">
+            <TriangleAlert size={20} />
+            {error}
           </div>
         )}
+
+        <ResultCard result={result} />
       </section>
-    </main>
+    </div>
   );
 }

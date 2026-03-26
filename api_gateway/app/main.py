@@ -20,7 +20,13 @@ from database.session import SessionLocal, engine
 
 configure_logging()
 
-app = FastAPI(title=settings.app_name)
+app = FastAPI(
+    title=settings.app_name,
+    description="Production-grade distributed deepfake detection API.",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
 app.add_middleware(
     CORSMiddleware,
