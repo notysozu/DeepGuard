@@ -61,6 +61,11 @@ If you plan to share the project publicly, adding a short screen recording of th
 
 The installer prepares the Python environment, installs frontend dependencies, creates local config files, starts the API and model services, and launches the Vite dev server.
 
+Optional environment flags:
+
+- `START_APP=0` installs and configures the project without launching services
+- `INSTALL_DEV_DEPS=1` installs `requirements-dev.txt` instead of runtime-only Python dependencies
+
 Linux / macOS:
 
 ```bash

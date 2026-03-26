@@ -2,8 +2,10 @@
 set -Eeuo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-DEFAULT_REPO_URL="${REPO_URL:-<YOUR_REPO_URL>}"
+DEFAULT_REPO_URL="${REPO_URL:-https://github.com/notysozu/DeepGuard.git}"
 DEFAULT_REPO_DIR="${REPO_DIR:-DeepGuard}"
+INSTALL_DEV_DEPS="${INSTALL_DEV_DEPS:-0}"
+START_APP="${START_APP:-1}"
 
 log() {
   printf '[%s] %s\n' "$SCRIPT_NAME" "$*" >&2
@@ -25,6 +27,35 @@ run_cmd() {
 
 have_cmd() {
   command -v "$1" >/dev/null 2>&1
+}
+
+require_min_version() {
+  local label="$1"
+  local actual="$2"
+  local minimum="$3"
+
+  if ! python3 - "$actual" "$minimum" <<'PY'
+import sys
+
+def parse(version: str) -> tuple[int, ...]:
+    parts = []
+    for item in version.split("."):
+        digits = []
+        for char in item:
+            if char.isdigit():
+                digits.append(char)
+            else:
+                break
+        parts.append(int("".join(digits) or "0"))
+    return tuple(parts)
+
+actual = parse(sys.argv[1])
+minimum = parse(sys.argv[2])
+raise SystemExit(0 if actual >= minimum else 1)
+PY
+  then
+    die "$label version $actual is too old. Required: $minimum+"
+  fi
 }
 
 need_sudo() {
@@ -96,6 +127,12 @@ ensure_base_tools() {
   have_cmd python3 || die "python3 is required."
   have_cmd node || die "node is required."
   have_cmd npm || die "npm is required."
+
+  local python_version node_version
+  python_version="$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
+  node_version="$(node -p 'process.versions.node')"
+  require_min_version "Python" "$python_version" "3.10.0"
+  require_min_version "Node.js" "$node_version" "18.0.0"
 }
 
 resolve_repo_dir() {
@@ -109,7 +146,6 @@ resolve_repo_dir() {
     return
   fi
 
-  [[ "$DEFAULT_REPO_URL" != "<YOUR_REPO_URL>" ]] || die "Set REPO_URL to clone the repository, or run this script from the repo root."
   run_cmd git clone "$DEFAULT_REPO_URL" "$DEFAULT_REPO_DIR"
   printf '%s/%s\n' "$(pwd)" "$DEFAULT_REPO_DIR"
 }
@@ -183,13 +219,17 @@ EOF
 
 install_project_dependencies() {
   local repo_dir="$1"
+  local requirements_file="$repo_dir/requirements.txt"
 
   if [[ ! -d "$repo_dir/.venv" ]]; then
     run_cmd python3 -m venv "$repo_dir/.venv"
   fi
 
   run_cmd "$repo_dir/.venv/bin/python" -m pip install --upgrade pip
-  run_cmd "$repo_dir/.venv/bin/pip" install -r "$repo_dir/requirements.txt"
+  if [[ "$INSTALL_DEV_DEPS" == "1" && -f "$repo_dir/requirements-dev.txt" ]]; then
+    requirements_file="$repo_dir/requirements-dev.txt"
+  fi
+  run_cmd "$repo_dir/.venv/bin/pip" install -r "$requirements_file"
 
   if [[ -f "$repo_dir/web_ui/package-lock.json" ]]; then
     run_cmd npm --prefix "$repo_dir/web_ui" ci
@@ -250,6 +290,8 @@ start_application() {
   local python_bin="$repo_dir/.venv/bin/python"
   local uvicorn_bin="$repo_dir/.venv/bin/uvicorn"
 
+  [[ -x "$uvicorn_bin" ]] || die "uvicorn was not installed in $repo_dir/.venv"
+
   mkdir -p "$log_dir" "$pid_dir"
 
   (
@@ -297,7 +339,11 @@ main() {
   repo_dir="$(resolve_repo_dir)"
   prepare_env_files "$repo_dir"
   install_project_dependencies "$repo_dir"
-  start_application "$repo_dir"
+  if [[ "$START_APP" == "1" ]]; then
+    start_application "$repo_dir"
+  else
+    log "Skipping application startup because START_APP=$START_APP"
+  fi
   print_summary "$repo_dir"
 }
 

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$RepoUrl = $env:REPO_URL,
+    [string]$RepoUrl = $(if ($env:REPO_URL) { $env:REPO_URL } else { "https://github.com/notysozu/DeepGuard.git" }),
     [string]$RepoDir = $(if ($env:REPO_DIR) { $env:REPO_DIR } else { "DeepGuard" })
 )
 
@@ -28,6 +28,18 @@ function Fail {
 function Test-Command {
     param([string]$Name)
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Assert-MinVersion {
+    param(
+        [string]$Label,
+        [string]$Actual,
+        [string]$Minimum
+    )
+
+    if ([version]$Actual -lt [version]$Minimum) {
+        Fail "$Label version $Actual is too old. Required: $Minimum+"
+    }
 }
 
 function Install-SystemDependencies {
@@ -79,6 +91,11 @@ function Ensure-BaseTools {
             Fail "$tool is required but was not found after installation."
         }
     }
+
+    $pythonVersion = python -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"
+    $nodeVersion = node -p "process.versions.node"
+    Assert-MinVersion -Label "Python" -Actual $pythonVersion -Minimum "3.10"
+    Assert-MinVersion -Label "Node.js" -Actual $nodeVersion -Minimum "18.0"
 }
 
 function Resolve-RepoDir {
@@ -90,10 +107,6 @@ function Resolve-RepoDir {
     $target = Join-Path $cwd $RepoDir
     if (Test-Path (Join-Path $target ".git")) {
         return $target
-    }
-
-    if (-not $RepoUrl -or $RepoUrl -eq "<YOUR_REPO_URL>") {
-        Fail "Set REPO_URL before running the installer outside an existing checkout."
     }
 
     Write-Log "Cloning repository into $target"
@@ -170,6 +183,7 @@ function Install-ProjectDependencies {
     param([string]$RepoPath)
 
     $venvPath = Join-Path $RepoPath ".venv"
+    $requirementsFile = Join-Path $RepoPath "requirements.txt"
     if (-not (Test-Path $venvPath)) {
         Write-Log "Creating Python virtual environment"
         python -m venv $venvPath
@@ -181,7 +195,10 @@ function Install-ProjectDependencies {
     }
 
     & $pythonExe -m pip install --upgrade pip
-    & $pythonExe -m pip install -r (Join-Path $RepoPath "requirements.txt")
+    if ($env:INSTALL_DEV_DEPS -eq "1" -and (Test-Path (Join-Path $RepoPath "requirements-dev.txt"))) {
+        $requirementsFile = Join-Path $RepoPath "requirements-dev.txt"
+    }
+    & $pythonExe -m pip install -r $requirementsFile
 
     if (Test-Path (Join-Path $RepoPath "web_ui/package-lock.json")) {
         npm --prefix (Join-Path $RepoPath "web_ui") ci
@@ -310,7 +327,12 @@ Ensure-BaseTools
 $RepoPath = Resolve-RepoDir
 Prepare-EnvFiles -RepoPath $RepoPath
 Install-ProjectDependencies -RepoPath $RepoPath
-Start-Application -RepoPath $RepoPath
+if ($env:START_APP -eq "0") {
+    Write-Log "Skipping application startup because START_APP=0"
+}
+else {
+    Start-Application -RepoPath $RepoPath
+}
 
 Write-Host ""
 Write-Host "DeepGuard is ready."
