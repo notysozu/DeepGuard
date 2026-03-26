@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,12 +21,37 @@ from database.session import SessionLocal, engine
 
 configure_logging()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        ensure_default_user(
+            db,
+            username=os.getenv("APP_USERNAME", "admin"),
+            password=os.getenv("APP_PASSWORD", "admin123"),
+            role="admin",
+        )
+        ensure_default_user(
+            db,
+            username=os.getenv("APP_VIEWER_USERNAME", "viewer"),
+            password=os.getenv("APP_VIEWER_PASSWORD", "viewer123"),
+            role="viewer",
+        )
+    finally:
+        db.close()
+
+    yield
+
 app = FastAPI(
     title=settings.app_name,
     description="Production-grade distributed deepfake detection API.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -45,25 +71,3 @@ app.include_router(health_router)
 app.include_router(predict_router)
 app.include_router(detect_router)
 app.include_router(history_router)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    Base.metadata.create_all(bind=engine)
-
-    db = SessionLocal()
-    try:
-        ensure_default_user(
-            db,
-            username=os.getenv("APP_USERNAME", "admin"),
-            password=os.getenv("APP_PASSWORD", "admin123"),
-            role="admin",
-        )
-        ensure_default_user(
-            db,
-            username=os.getenv("APP_VIEWER_USERNAME", "viewer"),
-            password=os.getenv("APP_VIEWER_PASSWORD", "viewer123"),
-            role="viewer",
-        )
-    finally:
-        db.close()

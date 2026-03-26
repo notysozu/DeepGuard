@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Token(BaseModel):
@@ -48,9 +48,7 @@ class ModelResponse(BaseModel):
     prediction: Literal[0, 1]
     class_name: Literal["real", "fake"] = Field(alias="class")
     inference_time: float = Field(ge=0.0)
-
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class PredictionResponse(BaseModel):
