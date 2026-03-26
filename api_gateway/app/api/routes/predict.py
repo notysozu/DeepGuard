@@ -27,5 +27,7 @@ async def predict(
     
     try:
         return await run_prediction(file=file, db=db)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
