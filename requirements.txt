@@ -4,7 +4,7 @@ httpx
 pydantic
 python-multipart
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 sqlalchemy
 psycopg2-binary
 joblib

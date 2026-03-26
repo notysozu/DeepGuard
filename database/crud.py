@@ -1,25 +1,86 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import secrets
 import uuid
 from datetime import datetime
+from hmac import compare_digest
 from typing import Any
 
-from passlib.context import CryptContext
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from database.models import DetectionRequest, User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+PBKDF2_ALGORITHM = "sha256"
+PBKDF2_ITERATIONS = 600_000
+SALT_BYTES = 16
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = secrets.token_bytes(SALT_BYTES)
+    digest = hashlib.pbkdf2_hmac(
+        PBKDF2_ALGORITHM,
+        password.encode("utf-8"),
+        salt,
+        PBKDF2_ITERATIONS,
+    )
+    salt_b64 = base64.urlsafe_b64encode(salt).decode("ascii")
+    digest_b64 = base64.urlsafe_b64encode(digest).decode("ascii")
+    return f"pbkdf2_{PBKDF2_ALGORITHM}${PBKDF2_ITERATIONS}${salt_b64}${digest_b64}"
+
+
+def _verify_pbkdf2_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        scheme, iterations, salt_b64, digest_b64 = hashed_password.split("$", 3)
+    except ValueError:
+        return False
+
+    if scheme != f"pbkdf2_{PBKDF2_ALGORITHM}":
+        return False
+
+    try:
+        salt = base64.urlsafe_b64decode(salt_b64.encode("ascii"))
+        expected_digest = base64.urlsafe_b64decode(digest_b64.encode("ascii"))
+        rounds = int(iterations)
+    except (ValueError, TypeError):
+        return False
+
+    actual_digest = hashlib.pbkdf2_hmac(
+        PBKDF2_ALGORITHM,
+        plain_password.encode("utf-8"),
+        salt,
+        rounds,
+    )
+    return compare_digest(actual_digest, expected_digest)
+
+
+def _verify_legacy_bcrypt_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password.startswith("$2"):
+        return False
+
+    try:
+        import bcrypt
+    except ImportError:
+        return False
+
+    password_bytes = plain_password.encode("utf-8")
+    if len(password_bytes) > 72:
+        return False
+
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return _verify_pbkdf2_password(plain_password, hashed_password) or _verify_legacy_bcrypt_password(
+        plain_password,
+        hashed_password,
+    )
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:
