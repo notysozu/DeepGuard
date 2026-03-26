@@ -1,12 +1,10 @@
-from fastapi.testclient import TestClient
-
-from api_gateway.app.main import app
-
+import httpx
+import pytest
 
 
-def test_health_details_shape() -> None:
-    client = TestClient(app)
-    response = client.get("/health/details")
+@pytest.mark.anyio
+async def test_health_details_shape(client: httpx.AsyncClient) -> None:
+    response = await client.get("/health/details")
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "api_gateway"

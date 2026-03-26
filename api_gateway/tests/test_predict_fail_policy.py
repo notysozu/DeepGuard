@@ -1,23 +1,17 @@
-from fastapi.testclient import TestClient
+from types import SimpleNamespace
 
-from api_gateway.app.main import app
+import httpx
+import pytest
 
-
-
-def _get_token(client: TestClient) -> str:
-    response = client.post(
-        "/auth/token",
-        data={"username": "admin", "password": "admin123"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    return response.json()["access_token"]
+from api_gateway.tests.test_helpers import get_token
 
 
-
-def test_predict_fail_closed_when_no_model_results(monkeypatch) -> None:
+@pytest.mark.anyio
+async def test_predict_fail_closed_when_no_model_results(
+    monkeypatch,
+    client: httpx.AsyncClient,
+) -> None:
     from api_gateway.app.services import prediction_service
-    from types import SimpleNamespace
 
     async def fake_query_models_parallel(*args, **kwargs):
         return []
@@ -34,10 +28,9 @@ def test_predict_fail_closed_when_no_model_results(monkeypatch) -> None:
     )
     monkeypatch.setattr(prediction_service, "settings", patched)
 
-    client = TestClient(app)
-    token = _get_token(client)
+    token = await get_token(client, "admin", "admin123")
     headers = {"Authorization": f"Bearer {token}"}
     files = {"file": ("sample.jpg", b"closed-mode-bytes", "image/jpeg")}
 
-    response = client.post("/predict", headers=headers, files=files)
+    response = await client.post("/predict", headers=headers, files=files)
     assert response.status_code == 503

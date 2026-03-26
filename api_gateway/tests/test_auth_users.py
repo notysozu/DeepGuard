@@ -1,28 +1,15 @@
-from fastapi.testclient import TestClient
+import httpx
+import pytest
 
-from api_gateway.app.main import app
-
-
-client = TestClient(app)
+from api_gateway.tests.test_helpers import get_token
 
 
-
-def _get_token(username: str, password: str) -> str:
-    response = client.post(
-        "/auth/token",
-        data={"username": username, "password": password},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
-
-def test_admin_can_create_and_list_users() -> None:
-    token = _get_token("admin", "admin123")
+@pytest.mark.anyio
+async def test_admin_can_create_and_list_users(client: httpx.AsyncClient) -> None:
+    token = await get_token(client, "admin", "admin123")
     headers = {"Authorization": f"Bearer {token}"}
 
-    create = client.post(
+    create = await client.post(
         "/auth/users",
         headers=headers,
         json={
@@ -34,18 +21,18 @@ def test_admin_can_create_and_list_users() -> None:
     )
     assert create.status_code in {200, 409}
 
-    listing = client.get("/auth/users", headers=headers)
+    listing = await client.get("/auth/users", headers=headers)
     assert listing.status_code == 200
     items = listing.json()["items"]
     assert any(i["username"] == "admin" for i in items)
 
 
-
-def test_viewer_cannot_manage_users() -> None:
-    token = _get_token("viewer", "viewer123")
+@pytest.mark.anyio
+async def test_viewer_cannot_manage_users(client: httpx.AsyncClient) -> None:
+    token = await get_token(client, "viewer", "viewer123")
     headers = {"Authorization": f"Bearer {token}"}
 
-    create = client.post(
+    create = await client.post(
         "/auth/users",
         headers=headers,
         json={
@@ -57,5 +44,5 @@ def test_viewer_cannot_manage_users() -> None:
     )
     assert create.status_code == 403
 
-    listing = client.get("/auth/users", headers=headers)
+    listing = await client.get("/auth/users", headers=headers)
     assert listing.status_code == 403

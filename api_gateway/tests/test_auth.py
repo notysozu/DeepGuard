@@ -1,14 +1,10 @@
-from fastapi.testclient import TestClient
-
-from api_gateway.app.main import app
-
-
-client = TestClient(app)
+import httpx
+import pytest
 
 
-
-def test_auth_token_success() -> None:
-    response = client.post(
+@pytest.mark.anyio
+async def test_auth_token_success(client: httpx.AsyncClient) -> None:
+    response = await client.post(
         "/auth/token",
         data={"username": "admin", "password": "admin123"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -19,9 +15,9 @@ def test_auth_token_success() -> None:
     assert body["token_type"] == "bearer"
 
 
-
-def test_auth_token_failure() -> None:
-    response = client.post(
+@pytest.mark.anyio
+async def test_auth_token_failure(client: httpx.AsyncClient) -> None:
+    response = await client.post(
         "/auth/token",
         data={"username": "admin", "password": "wrong"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},

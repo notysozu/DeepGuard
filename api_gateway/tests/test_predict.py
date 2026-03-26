@@ -1,32 +1,20 @@
-from fastapi.testclient import TestClient
+import httpx
+import pytest
 
-from api_gateway.app.main import app
-
-
-
-def _get_token(client: TestClient) -> str:
-    response = client.post(
-        "/auth/token",
-        data={"username": "admin", "password": "admin123"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    assert response.status_code == 200
-    return response.json()["access_token"]
+from api_gateway.tests.test_helpers import get_token
 
 
-
-def test_predict_requires_auth() -> None:
-    client = TestClient(app)
-    response = client.post("/predict")
+@pytest.mark.anyio
+async def test_predict_requires_auth(client: httpx.AsyncClient) -> None:
+    response = await client.post("/predict")
     assert response.status_code == 401
 
 
-
-def test_predict_success() -> None:
-    client = TestClient(app)
-    token = _get_token(client)
+@pytest.mark.anyio
+async def test_predict_success(client: httpx.AsyncClient) -> None:
+    token = await get_token(client, "admin", "admin123")
     files = {"file": ("sample.jpg", b"fake-image-bytes", "image/jpeg")}
-    response = client.post(
+    response = await client.post(
         "/predict",
         files=files,
         headers={"Authorization": f"Bearer {token}"},
@@ -38,15 +26,14 @@ def test_predict_success() -> None:
     assert body["duplicate_cache_hit"] is False
 
 
-
-def test_predict_duplicate_cache_hit() -> None:
-    client = TestClient(app)
-    token = _get_token(client)
+@pytest.mark.anyio
+async def test_predict_duplicate_cache_hit(client: httpx.AsyncClient) -> None:
+    token = await get_token(client, "admin", "admin123")
     files = {"file": ("sample.jpg", b"same-bytes", "image/jpeg")}
     headers = {"Authorization": f"Bearer {token}"}
 
-    first = client.post("/predict", files=files, headers=headers)
-    second = client.post("/predict", files=files, headers=headers)
+    first = await client.post("/predict", files=files, headers=headers)
+    second = await client.post("/predict", files=files, headers=headers)
 
     assert first.status_code == 200
     assert second.status_code == 200
