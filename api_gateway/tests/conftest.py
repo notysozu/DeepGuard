@@ -20,8 +20,10 @@ async def client() -> AsyncIterator[httpx.AsyncClient]:
             "request-level coverage remains enabled in CI on Python 3.11.",
         )
 
-    await app.router.startup()
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as test_client:
-        yield test_client
-    await app.router.shutdown()
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as test_client:
+            yield test_client
